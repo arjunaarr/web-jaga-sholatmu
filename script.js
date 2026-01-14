@@ -71,6 +71,11 @@ const elPrevMonth = document.getElementById('prevMonth');
 const elNextMonth = document.getElementById('nextMonth');
 const elCalendarStats = document.getElementById('calendarStats');
 
+// State kalender (dideklarasikan sebelum fungsi render dipanggil)
+let currentCalendarYear = null;
+let currentCalendarMonth = null;
+let monthServerMap = null;
+
 // Waktu & tanggal
 function formatDateID(d) {
   const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -268,33 +273,9 @@ async function fetchMonthStatuses(startDate, endDate) {
 
 // Jadwal sholat via Aladhan (opsional, fallback statis)
 async function getPrayerTimes() {
-  // Fallback statis (contoh)
-  const fallback = { subuh: '04:45', dzuhur: '12:00', ashar: '15:15', maghrib: '18:00', isya: '19:15' };
-  try {
-    if (!navigator.geolocation) {
-      elLocationInfo.textContent = 'Lokasi: tidak tersedia (fallback)';
-      return fallback;
-    }
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
-    const { latitude, longitude } = pos.coords;
-    elLocationInfo.textContent = `Lokasi: ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
-    const timestamp = Math.floor(Date.now() / 1000);
-    const url = `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${latitude}&longitude=${longitude}&method=2`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (!data?.data?.timings) return fallback;
-    const t = data.data.timings;
-    return {
-      subuh: t.Fajr,
-      dzuhur: t.Dhuhr,
-      ashar: t.Asr,
-      maghrib: t.Maghrib,
-      isya: t.Isha,
-    };
-  } catch (e) {
-    elLocationInfo.textContent = 'Lokasi: gagal didapat (fallback)';
-    return fallback;
-  }
+  // Mode cepat: tanpa lokasi & tanpa API eksternal
+  elLocationInfo.textContent = 'Lokasi: — (tanpa lokasi)';
+  return { subuh: '04:45', dzuhur: '12:00', ashar: '15:15', maghrib: '18:00', isya: '19:15' };
 }
 
 // Mode fokus ibadah
@@ -392,9 +373,6 @@ if (elLogoutBtn) {
 })();
 
 // Kalender Bulan Ini
-let currentCalendarYear = null;
-let currentCalendarMonth = null;
-let monthServerMap = null;
 function formatDateKey(d) {
   return d.toISOString().slice(0, 10);
 }
