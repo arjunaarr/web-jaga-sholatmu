@@ -61,8 +61,8 @@ const elLogoutBtn = document.getElementById('logoutBtn');
 const elUserInfo = document.getElementById('userInfo');
 // Auth email modal
 const elAuthModal = document.getElementById('authModal');
-const elAuthEmail = document.getElementById('authEmail');
-const elAuthSendLink = document.getElementById('authSendLink');
+const elAuthUsername = document.getElementById('authUsername');
+const elAuthDoLogin = document.getElementById('authDoLogin');
 const elAuthClose = document.getElementById('authClose');
 const elAuthMsg = document.getElementById('authMsg');
 const elPrevMonth = document.getElementById('prevMonth');
@@ -299,13 +299,15 @@ elFocusToggle.addEventListener('click', () => {
 
 // Auth: login via Google & logout
 let currentUser = null;
+const usernameKey = 'websolat_username';
+let savedUsername = localStorage.getItem(usernameKey) || null;
 function updateAuthUI() {
   if (!elLoginBtn || !elLogoutBtn || !elUserInfo) return;
   const loggedIn = !!currentUser;
   elLoginBtn.hidden = loggedIn;
   elLogoutBtn.hidden = !loggedIn;
   elUserInfo.hidden = !loggedIn;
-  elUserInfo.textContent = loggedIn ? (currentUser.email || 'Pengguna') : 'Pengguna';
+  elUserInfo.textContent = loggedIn ? (savedUsername || 'Pengguna') : 'Pengguna';
 }
 function getIdSelector() {
   if (currentUser?.id) {
@@ -336,7 +338,7 @@ if (supabaseEnabled && supabase) {
     });
   } catch {}
 }
-// Login via Email (Magic Link)
+// Login via Username (anonymous Supabase)
 if (elLoginBtn) {
   elLoginBtn.addEventListener('click', () => {
     if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan ANON_KEY di config.js.'); return; }
@@ -349,21 +351,47 @@ if (elAuthClose) {
     if (elAuthModal) elAuthModal.hidden = true;
   });
 }
-if (elAuthSendLink) {
-  elAuthSendLink.addEventListener('click', async () => {
+if (elAuthDoLogin) {
+  elAuthDoLogin.addEventListener('click', async () => {
     if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi.'); return; }
-    const email = (elAuthEmail?.value || '').trim();
-    if (!email) { elAuthMsg.textContent = 'Masukkan email yang valid.'; return; }
-    elAuthSendLink.disabled = true;
-    elAuthMsg.textContent = 'Mengirim tautan masuk...';
+    const username = (elAuthUsername?.value || '').trim();
+    if (!username) { elAuthMsg.textContent = 'Masukkan username terlebih dahulu.'; return; }
+    elAuthDoLogin.disabled = true;
+    elAuthMsg.textContent = 'Membuat sesi anonim...';
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
-      if (error) throw error;
-      elAuthMsg.textContent = 'Tautan masuk telah dikirim. Periksa email Anda.';
+      // Jika belum ada sesi, buat sesi anonim
+      const { data: sessData } = await supabase.auth.getSession();
+      if (!sessData?.session) {
+        const { error: signErr } = await supabase.auth.signInAnonymously();
+        if (signErr) throw signErr;
+      }
+      // Set metadata username (opsional)
+      try { await supabase.auth.updateUser({ data: { username } }); } catch {}
+      // Ambil user terkini
+      const { data: after } = await supabase.auth.getSession();
+      currentUser = after?.session?.user || null;
+      // Simpan username lokal
+      savedUsername = username;
+      localStorage.setItem(usernameKey, username);
+      updateAuthUI();
+      if (elAuthModal) elAuthModal.hidden = true;
+      // Tarik ulang status dari server untuk user ini
+      const todayData = await fetchTodayFromSupabase();
+      if (todayData) {
+        status = {
+          subuh: !!todayData.subuh,
+          dzuhur: !!todayData.dzuhur,
+          ashar: !!todayData.ashar,
+          maghrib: !!todayData.maghrib,
+          isya: !!todayData.isya,
+        };
+        saveStatus(status);
+        renderPrayerList();
+      }
     } catch (e) {
-      elAuthMsg.textContent = 'Gagal mengirim tautan: ' + (e?.message || e);
+      elAuthMsg.textContent = 'Gagal masuk: ' + (e?.message || e);
     } finally {
-      elAuthSendLink.disabled = false;
+      elAuthDoLogin.disabled = false;
     }
   });
 }
@@ -371,6 +399,8 @@ if (elLogoutBtn) {
   elLogoutBtn.addEventListener('click', async () => {
     if (!supabaseEnabled || !supabase) return;
     await supabase.auth.signOut();
+    localStorage.removeItem(usernameKey);
+    savedUsername = null;
   });
 }
 
