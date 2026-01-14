@@ -34,17 +34,19 @@ const deviceId = (() => {
 
 // Supabase client (opsional)
 let supabase = null;
-let supabaseEnabled = false;
-if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-  supabaseEnabled = true;
+let supabaseEnabled = !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+async function ensureSupabase() {
+  if (!supabaseEnabled) return null;
+  if (supabase) return supabase;
   try {
-    // Import ESM Supabase di runtime
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
   } catch (err) {
     console.warn('Gagal memuat Supabase JS:', err);
     supabaseEnabled = false;
+    return null;
   }
+  return supabase;
 }
 
 // Elemen DOM
@@ -147,6 +149,7 @@ function updateProgress() {
 
 // Supabase sync (opsional)
 async function syncSupabase(currentStatus) {
+  await ensureSupabase();
   if (!supabaseEnabled || !supabase) return;
   const selector = getIdSelector();
   const payload = {
@@ -186,6 +189,7 @@ async function syncSupabase(currentStatus) {
 
 // Supabase: pembacaan status
 async function fetchTodayFromSupabase() {
+  await ensureSupabase();
   if (!supabaseEnabled || !supabase) return null;
   const sel = getIdSelector();
   try {
@@ -214,6 +218,7 @@ async function fetchTodayFromSupabase() {
 }
 
 async function fetchMonthStatuses(startDate, endDate) {
+  await ensureSupabase();
   if (!supabaseEnabled || !supabase) return null;
   const sel = getIdSelector();
   try {
@@ -374,35 +379,16 @@ if (elLogoutBtn) {
 }
 
 (async function init() {
-  // Jika Supabase aktif, baca status hari ini dan bulanan
-  try {
-    const todayData = await fetchTodayFromSupabase();
-    if (todayData) {
-      status = {
-        subuh: !!todayData.subuh,
-        dzuhur: !!todayData.dzuhur,
-        ashar: !!todayData.ashar,
-        maghrib: !!todayData.maghrib,
-        isya: !!todayData.isya,
-      };
-      saveStatus(status);
-    }
-  } catch {}
-
-  let base = new Date();
-  let startMonth = new Date(base.getFullYear(), base.getMonth(), 1);
-  let endMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0);
-  let monthMap = null;
-  try {
-    monthMap = await fetchMonthStatuses(startMonth, endMonth);
-  } catch {}
-
-  const times = await getPrayerTimes();
-  renderPrayerList(times);
-  // Sync awal ke Supabase (jika ada)
-  await syncSupabase(status).catch(() => {});
-  renderCalendarMonth(base, monthMap);
-  renderMonthStats(base, monthMap);
+  // Render awal secepat mungkin tanpa menunggu network
+  const base = new Date();
+  renderPrayerList();
+  renderCalendarMonth(base);
+  renderMonthStats(base);
+  // Update waktu sholat secara async
+  getPrayerTimes().then(times => {
+    renderPrayerList(times);
+  }).catch(() => {});
+  // Sync ke Supabase akan dilakukan setelah user mengatur username atau pada interaksi
 })();
 
 // Kalender Bulan Ini
