@@ -1,0 +1,130 @@
+:root {
+  --bg: #f7faf7;
+  --text: #1f2d2c;
+  --muted: #5b6b69;
+  --primary: #5dbb63; /* hijau pastel */
+  --primary-50: #eaf7ee;
+  --accent: #63a4ff; /* biru langit */
+  --accent-50: #eaf2ff;
+  --card: #ffffff;
+  --cream: #fff6e9;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--card);
+  border-bottom: 1px solid #e5e9e7;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.icon { width: 20px; height: 20px; color: var(--primary); }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.btn {
+  appearance: none;
+  border: 1px solid #cfe5cf;
+  background: var(--primary-50);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn:active { transform: translateY(1px); }
+.user-chip { border: 1px solid #d6e4ff; background: var(--accent-50); color: var(--text); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+
+.container { max-width: 880px; margin: 0 auto; padding: 20px; }
+
+.hero { text-align: center; padding: 10px 0 20px; }
+.title { margin: 0 0 8px; font-weight: 700; font-size: clamp(22px, 4vw, 32px); }
+.quote { color: var(--muted); font-size: 14px; }
+
+.today {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+.date-time { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.date { font-weight: 600; }
+.time { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+.dzikir { color: var(--muted); font-size: 14px; }
+
+.schedule { background: var(--card); border: 1px solid #e5e9e7; border-radius: 12px; padding: 16px; }
+.schedule h2 { margin: 0 0 8px; font-size: 18px; }
+.location { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+
+.prayer-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.prayer-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e9e7;
+  border-radius: 10px;
+}
+.prayer-name { font-weight: 600; }
+.prayer-time { color: var(--muted); font-size: 13px; }
+.check-btn { border: 1px solid #cfe5cf; background: var(--primary-50); padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.check-btn.done { background: var(--primary); color: white; border-color: var(--primary); }
+
+.progress { margin-top: 12px; }
+.progress-text { font-size: 14px; margin-bottom: 6px; }
+.progress-bar { height: 10px; background: #eef3f1; border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 300ms ease; }
+
+.motivation { margin-top: 20px; background: var(--card); border: 1px solid #e5e9e7; border-radius: 12px; padding: 16px; }
+.motivation h2 { margin: 0 0 8px; font-size: 18px; }
+.motivation-text { color: var(--muted); font-size: 14px; }
+
+.calendar { margin-top: 20px; background: var(--card); border: 1px solid #e5e9e7; border-radius: 12px; padding: 16px; }
+.calendar h2 { margin: 0; font-size: 18px; }
+.calendar-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.calendar-nav { display: flex; gap: 8px; }
+.calendar-header { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px; }
+.weekday { text-align: center; font-size: 12px; color: var(--muted); }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.day-cell { border: 1px solid #e5e9e7; border-radius: 10px; padding: 8px; display: grid; gap: 6px; align-items: center; justify-items: start; background: #fbfcfb; min-height: 60px; }
+.day-number { font-size: 12px; color: var(--muted); }
+.day-progress { width: 100%; height: 8px; background: #eef3f1; border-radius: 999px; overflow: hidden; }
+.day-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 300ms ease; }
+.day-cell[data-p="5"] { background: var(--primary-50); border-color: #cfe5cf; }
+.day-cell[data-p="0"] { background: #f7f7f7; }
+.day-cell.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-50); }
+.day-cell.empty { background: transparent; border-color: #eceff0; }
+
+.calendar-stats { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-card { border: 1px solid #e5e9e7; border-radius: 10px; padding: 10px; background: #fbfcfb; }
+.stat-title { font-size: 12px; color: var(--muted); }
+.stat-value { font-size: 16px; font-weight: 600; }
+
+.app-footer { margin-top: 24px; padding: 20px; color: var(--muted); }
+.footer-inner { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+/* Mode Fokus Ibadah */
+body.focus {
+  background: linear-gradient(180deg, #f4fbff, #f7faf7);
+}
+.focus .container { backdrop-filter: saturate(1.1); }
+.focus .dzikir { color: #3b5b5a; }
+.focus .schedule, .focus .motivation { border-color: #dfe9f1; }
+
+/* Responsif */
+@media (min-width: 640px) {
+  .today { grid-template-columns: 1fr 1fr; align-items: center; }
+}

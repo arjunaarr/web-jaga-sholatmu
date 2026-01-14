@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web Sholat – Jaga Sholatmu, Jaga Hidupmu</title>
+    <meta name="description" content="Motivasi dan pengingat harian untuk sholat 5 waktu dengan desain minimalis dan tenang." />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <!-- Ikon masjid sederhana (inline SVG) -->
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2l3 3v2l3 2v3h2v8H4v-8h2V9l3-2V5l3-3zM6 18h12v-4H6v4z" fill="currentColor" />
+        </svg>
+        <span>Web Sholat</span>
+      </div>
+      <div class="header-actions">
+        <button id="focusToggle" class="btn">Mode Fokus Ibadah</button>
+        <span id="userInfo" class="user-chip" hidden>Pengguna</span>
+        <button id="loginBtn" class="btn">Masuk via Google</button>
+        <button id="logoutBtn" class="btn" hidden>Keluar</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1 class="title">Jaga Sholatmu, Jaga Hidupmu</h1>
+        <p class="quote">“Sesungguhnya sholat itu mencegah dari (perbuatan) keji dan mungkar.” — QS. Al-‘Ankabut: 45</p>
+      </section>
+
+      <section class="today">
+        <div class="date-time">
+          <div id="todayDate" class="date">Senin, 1 Januari 2026</div>
+          <div id="todayTime" class="time">00:00:00</div>
+        </div>
+        <div class="dzikir" id="dzikirLine" aria-live="polite">Subhanallah · Alhamdulillah · Allahu Akbar · Lā ilāha illallāh</div>
+      </section>
+
+      <section class="schedule">
+        <h2>Jadwal Sholat Hari Ini</h2>
+        <div id="locationInfo" class="location">Lokasi: —</div>
+        <ul id="prayerList" class="prayer-list">
+          <!-- Diisi oleh script.js -->
+        </ul>
+        <div class="progress">
+          <div id="progressText" class="progress-text">Progres: 0/5</div>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="motivation">
+        <h2>Motivasi Harian</h2>
+        <p id="motivationText" class="motivation-text">Semoga Allah memudahkan langkahmu untuk sholat tepat waktu.</p>
+      </section>
+
+      <section class="calendar">
+        <div class="calendar-top">
+          <h2>Kalender Bulan Ini</h2>
+          <div class="calendar-nav">
+            <button id="prevMonth" class="btn" aria-label="Bulan Sebelumnya">←</button>
+            <button id="nextMonth" class="btn" aria-label="Bulan Berikutnya">→</button>
+          </div>
+        </div>
+        <div id="calendarHeader" class="calendar-header">Januari 2026</div>
+        <div class="calendar-weekdays">
+          <div class="weekday">Sen</div>
+          <div class="weekday">Sel</div>
+          <div class="weekday">Rab</div>
+          <div class="weekday">Kam</div>
+          <div class="weekday">Jum</div>
+          <div class="weekday">Sab</div>
+          <div class="weekday">Min</div>
+        </div>
+        <div id="calendarGrid" class="calendar-grid" aria-live="polite">
+          <!-- Diisi oleh script.js -->
+        </div>
+        <div id="calendarStats" class="calendar-stats">
+          <!-- Ringkasan bulan diisi oleh script.js -->
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <span>
+          <!-- Ikon bulan sabit sederhana (inline SVG) -->
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 2a9 9 0 106.32 15.32A8 8 0 0114 2z" fill="currentColor"/>
+          </svg>
+          Tetap tenang, tetap sholat.
+        </span>
+      </div>
+    </footer>
+
+    <!-- Config Supabase (opsional). Salin config.example.js menjadi config.js lalu isi) -->
+    <script src="config.js" defer></script>
+    <!-- Script utama (module) -->
+    <script type="module" src="script.js"></script>
+  </body>
+  </html>
