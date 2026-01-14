@@ -295,6 +295,19 @@ function updateAuthUI() {
   elUserInfo.hidden = !loggedIn;
   elUserInfo.textContent = loggedIn ? (savedUsername || 'Pengguna') : 'Pengguna';
 }
+
+function openAuthModal() {
+  if (!elAuthModal) return;
+  elAuthModal.hidden = false;
+  elAuthModal.setAttribute('aria-hidden', 'false');
+  elAuthModal.style.display = '';
+}
+function closeAuthModal() {
+  if (!elAuthModal) return;
+  elAuthModal.hidden = true;
+  elAuthModal.setAttribute('aria-hidden', 'true');
+  elAuthModal.style.display = 'none';
+}
 function getIdSelector() {
   if (savedUsername) {
     return { field: 'username', value: savedUsername, conflict: 'username,date' };
@@ -306,46 +319,62 @@ function getIdSelector() {
 }
 // Tidak menggunakan sesi auth Supabase untuk mengurangi waktu loading
 // Login via Username (anonymous Supabase)
+// Pulihkan sesi dari savedUsername saat init
+if (savedUsername) {
+  currentUser = { id: `username:${savedUsername}` };
+  updateAuthUI();
+  closeAuthModal();
+}
 if (elLoginBtn) {
   elLoginBtn.addEventListener('click', () => {
-    if (elAuthModal) elAuthModal.hidden = false;
+    openAuthModal();
     if (elAuthMsg) elAuthMsg.textContent = '';
   });
 }
 if (elAuthClose) {
   elAuthClose.addEventListener('click', () => {
-    if (elAuthModal) elAuthModal.hidden = true;
+    closeAuthModal();
+  });
+}
+// Submit dengan tombol Enter di input username
+if (elAuthUsername) {
+  elAuthUsername.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      elAuthDoLogin?.click();
+    }
   });
 }
 if (elAuthDoLogin) {
   elAuthDoLogin.addEventListener('click', async () => {
     const username = (elAuthUsername?.value || '').trim();
     if (!username) { elAuthMsg.textContent = 'Masukkan username terlebih dahulu.'; return; }
-    elAuthDoLogin.disabled = true;
-    elAuthMsg.textContent = 'Menyiapkan identitas username...';
+    // Tutup modal segera agar tidak terasa macet (paksa tutup)
+    closeAuthModal();
+    elAuthMsg.textContent = '';
     try {
       savedUsername = username;
       localStorage.setItem(usernameKey, username);
       currentUser = { id: `username:${username}` }; // penanda lokal agar UI menganggap login
       updateAuthUI();
-      if (elAuthModal) elAuthModal.hidden = true;
-      // Tarik ulang status dari server untuk username ini
-      const todayData = await fetchTodayFromSupabase();
-      if (todayData) {
-        status = {
-          subuh: !!todayData.subuh,
-          dzuhur: !!todayData.dzuhur,
-          ashar: !!todayData.ashar,
-          maghrib: !!todayData.maghrib,
-          isya: !!todayData.isya,
-        };
-        saveStatus(status);
-        renderPrayerList();
-      }
+      // Tarik ulang status dari server untuk username ini (non-blocking)
+      fetchTodayFromSupabase().then(todayData => {
+        if (todayData) {
+          status = {
+            subuh: !!todayData.subuh,
+            dzuhur: !!todayData.dzuhur,
+            ashar: !!todayData.ashar,
+            maghrib: !!todayData.maghrib,
+            isya: !!todayData.isya,
+          };
+          saveStatus(status);
+          renderPrayerList();
+        }
+      }).catch(() => {});
     } catch (e) {
+      // Jika gagal, buka kembali modal dengan pesan
+      openAuthModal();
       elAuthMsg.textContent = 'Gagal masuk: ' + (e?.message || e);
-    } finally {
-      elAuthDoLogin.disabled = false;
     }
   });
 }
