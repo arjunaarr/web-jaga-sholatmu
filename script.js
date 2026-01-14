@@ -358,6 +358,8 @@ if (savedUsername) {
   currentUser = { id: `username:${savedUsername}` };
   updateAuthUI();
   closeAuthModal();
+  // Migrasi/penyelarasan: dorong status lokal ke server di bawah username
+  syncSupabase(status).catch(() => {});
 }
 if (elLoginBtn) {
   elLoginBtn.addEventListener('click', () => {
@@ -391,6 +393,8 @@ if (elAuthDoLogin) {
       localStorage.setItem(usernameKey, username);
       currentUser = { id: `username:${username}` }; // penanda lokal agar UI menganggap login
       updateAuthUI();
+      // Segera sinkronkan status lokal ke server dengan kunci username
+      syncSupabase(status).catch(() => {});
       // Tarik ulang status dari server untuk username ini (non-blocking)
       fetchTodayFromSupabase().then(todayData => {
         if (todayData) {
