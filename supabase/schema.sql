@@ -19,6 +19,10 @@ create table if not exists public.prayers (
   updated_at timestamptz not null default now()
 );
 
+-- Jika tabel sudah terlanjur dibuat tanpa kolom username,
+-- tambahkan kolomnya agar index dan query di bawah tidak gagal.
+alter table public.prayers add column if not exists username text null;
+
 -- Unik per user per hari (khusus baris yang punya user_id)
 create unique index if not exists prayers_user_date_unique
   on public.prayers (user_id, date)
