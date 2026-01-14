@@ -405,6 +405,18 @@ if (elLogoutBtn) {
 }
 
 (async function init() {
+  // Pastikan ada sesi anonim agar data tersimpan stabil di perangkat ini
+  if (supabaseEnabled && supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data?.session) {
+        await supabase.auth.signInAnonymously();
+      }
+      const { data: after } = await supabase.auth.getSession();
+      currentUser = after?.session?.user || null;
+      updateAuthUI();
+    } catch {}
+  }
   // Jika Supabase aktif, baca status hari ini dan bulanan
   try {
     const todayData = await fetchTodayFromSupabase();
