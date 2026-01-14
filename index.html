@@ -19,7 +19,7 @@
       <div class="header-actions">
         <button id="focusToggle" class="btn">Mode Fokus Ibadah</button>
         <span id="userInfo" class="user-chip" hidden>Pengguna</span>
-        <button id="loginBtn" class="btn">Masuk via Google</button>
+        <button id="loginBtn" class="btn">Masuk via Email</button>
         <button id="logoutBtn" class="btn" hidden>Keluar</button>
       </div>
     </header>
@@ -100,5 +100,20 @@
     <script src="config.js" defer></script>
     <!-- Script utama (module) -->
     <script type="module" src="script.js"></script>
+
+    <!-- Modal Auth Email -->
+    <div id="authModal" class="modal" hidden>
+      <div class="modal-backdrop"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <h3 id="authTitle">Masuk via Email</h3>
+        <p class="muted">Masukkan email Anda, kami kirimkan tautan masuk (Magic Link).</p>
+        <input id="authEmail" type="email" placeholder="nama@domain.com" class="input" />
+        <div class="modal-actions">
+          <button id="authSendLink" class="btn">Kirim Magic Link</button>
+          <button id="authClose" class="btn">Tutup</button>
+        </div>
+        <div id="authMsg" class="auth-msg" aria-live="polite"></div>
+      </div>
+    </div>
   </body>
   </html>

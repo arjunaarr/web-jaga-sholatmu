@@ -46,16 +46,22 @@ create trigger prayers_updated_at
 alter table public.prayers enable row level security;
 
 -- Kebijakan untuk pengguna terautentikasi (disarankan untuk produksi)
-create policy if not exists "read_own" on public.prayers
-  for select to authenticated
+drop policy if exists "read_own" on public.prayers;
+create policy "read_own" on public.prayers
+  for select
+  to authenticated
   using (user_id = auth.uid());
 
-create policy if not exists "insert_own" on public.prayers
-  for insert to authenticated
+drop policy if exists "insert_own" on public.prayers;
+create policy "insert_own" on public.prayers
+  for insert
+  to authenticated
   with check (user_id = auth.uid());
 
-create policy if not exists "update_own" on public.prayers
-  for update to authenticated
+drop policy if exists "update_own" on public.prayers;
+create policy "update_own" on public.prayers
+  for update
+  to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 

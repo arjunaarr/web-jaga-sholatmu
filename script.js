@@ -59,6 +59,12 @@ const elFocusToggle = document.getElementById('focusToggle');
 const elLoginBtn = document.getElementById('loginBtn');
 const elLogoutBtn = document.getElementById('logoutBtn');
 const elUserInfo = document.getElementById('userInfo');
+// Auth email modal
+const elAuthModal = document.getElementById('authModal');
+const elAuthEmail = document.getElementById('authEmail');
+const elAuthSendLink = document.getElementById('authSendLink');
+const elAuthClose = document.getElementById('authClose');
+const elAuthMsg = document.getElementById('authMsg');
 const elPrevMonth = document.getElementById('prevMonth');
 const elNextMonth = document.getElementById('nextMonth');
 const elCalendarStats = document.getElementById('calendarStats');
@@ -330,13 +336,34 @@ if (supabaseEnabled && supabase) {
     });
   } catch {}
 }
+// Login via Email (Magic Link)
 if (elLoginBtn) {
-  elLoginBtn.addEventListener('click', async () => {
+  elLoginBtn.addEventListener('click', () => {
     if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan ANON_KEY di config.js.'); return; }
+    if (elAuthModal) elAuthModal.hidden = false;
+    if (elAuthMsg) elAuthMsg.textContent = '';
+  });
+}
+if (elAuthClose) {
+  elAuthClose.addEventListener('click', () => {
+    if (elAuthModal) elAuthModal.hidden = true;
+  });
+}
+if (elAuthSendLink) {
+  elAuthSendLink.addEventListener('click', async () => {
+    if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi.'); return; }
+    const email = (elAuthEmail?.value || '').trim();
+    if (!email) { elAuthMsg.textContent = 'Masukkan email yang valid.'; return; }
+    elAuthSendLink.disabled = true;
+    elAuthMsg.textContent = 'Mengirim tautan masuk...';
     try {
-      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+      if (error) throw error;
+      elAuthMsg.textContent = 'Tautan masuk telah dikirim. Periksa email Anda.';
     } catch (e) {
-      alert('Gagal memulai login Google: ' + (e?.message || e));
+      elAuthMsg.textContent = 'Gagal mengirim tautan: ' + (e?.message || e);
+    } finally {
+      elAuthSendLink.disabled = false;
     }
   });
 }
