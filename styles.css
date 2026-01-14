@@ -10,6 +10,35 @@
   --cream: #fff6e9;
 }
 
+/* Mode Malam (tema gelap) */
+.theme-dark {
+  --bg: #0f1514;
+  --text: #e6f0ee;
+  --muted: #9fb0ae;
+  --primary: #5dbb63;
+  --primary-50: #214a25;
+  --accent: #63a4ff;
+  --accent-50: #1a2a3f;
+  --card: #1a2322;
+}
+.theme-dark .app-header,
+.theme-dark .schedule,
+.theme-dark .motivation,
+.theme-dark .calendar,
+.theme-dark .prayer-item,
+.theme-dark .stat-card,
+.theme-dark .day-cell,
+.theme-dark .modal-card,
+.theme-dark .input { border-color: #2e3a38; }
+.theme-dark .btn,
+.theme-dark .check-btn { border-color: #2e3a38; }
+.theme-dark .progress-bar,
+.theme-dark .day-progress { background: #2a3331; }
+.theme-dark .day-cell { background: #1d2625; }
+.theme-dark .day-cell[data-p="5"] { background: var(--primary-50); border-color: #2e3a38; }
+.theme-dark .day-cell[data-p="0"] { background: #15201e; }
+.theme-dark .day-cell.empty { background: transparent; border-color: #2a3331; }
+
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {

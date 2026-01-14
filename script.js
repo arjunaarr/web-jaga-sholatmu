@@ -32,6 +32,11 @@ const deviceId = (() => {
   return id;
 })();
 
+// Auth state (dideklarasikan lebih awal agar aman dipakai fungsi lain)
+let currentUser = null;
+const usernameKey = 'websolat_username';
+let savedUsername = localStorage.getItem(usernameKey) || null;
+
 // Supabase client (opsional)
 let supabase = null;
 let supabaseEnabled = false;
@@ -62,6 +67,7 @@ const elProgressFill = document.getElementById('progressFill');
 const elLocationInfo = document.getElementById('locationInfo');
 const elMotivation = document.getElementById('motivationText');
 const elFocusToggle = document.getElementById('focusToggle');
+const elThemeToggle = document.getElementById('themeToggle');
 const elLoginBtn = document.getElementById('loginBtn');
 const elLogoutBtn = document.getElementById('logoutBtn');
 const elUserInfo = document.getElementById('userInfo');
@@ -99,14 +105,44 @@ function dailyIndex(len) {
 }
 elMotivation.textContent = motivations[dailyIndex(motivations.length)];
 
-// Load status sholat hari ini dari localStorage
+// Tema siang/malam
+const themeKey = 'websolat_theme';
+function getPreferredTheme() {
+  const t = localStorage.getItem(themeKey);
+  if (t === 'dark' || t === 'light') return t;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+function updateThemeButton() {
+  if (!elThemeToggle) return;
+  const isDark = document.body.classList.contains('theme-dark');
+  elThemeToggle.textContent = isDark ? 'Mode Siang' : 'Mode Malam';
+}
+function applyTheme(theme) {
+  document.body.classList.toggle('theme-dark', theme === 'dark');
+  try { localStorage.setItem(themeKey, theme); } catch {}
+  updateThemeButton();
+}
+applyTheme(getPreferredTheme());
+if (elThemeToggle) {
+  elThemeToggle.addEventListener('click', () => {
+    const isDark = document.body.classList.contains('theme-dark');
+    applyTheme(isDark ? 'light' : 'dark');
+  });
+}
+
+// Kunci localStorage berdasarkan konteks (per-username bila ada, fallback per-device)
+function localStorageKey(dateKey) {
+  if (savedUsername) return `status_user_${savedUsername}_${dateKey}`;
+  return `status_${deviceId}_${dateKey}`;
+}
+// Load status sholat hari ini dari localStorage (konteks-aware)
 function loadStatus() {
-  const raw = localStorage.getItem(`status_${deviceId}_${todayKey}`);
+  const raw = localStorage.getItem(localStorageKey(todayKey));
   if (!raw) return {};
   try { return JSON.parse(raw) || {}; } catch { return {}; }
 }
-function saveStatus(status) {
-  localStorage.setItem(`status_${deviceId}_${todayKey}`, JSON.stringify(status));
+function saveStatus(st) {
+  localStorage.setItem(localStorageKey(todayKey), JSON.stringify(st));
 }
 
 // Render daftar sholat
@@ -324,9 +360,6 @@ elFocusToggle.addEventListener('click', () => {
 });
 
 // Auth: login via Google & logout
-let currentUser = null;
-const usernameKey = 'websolat_username';
-let savedUsername = localStorage.getItem(usernameKey) || null;
 function updateAuthUI() {
   if (!elLoginBtn || !elLogoutBtn || !elUserInfo) return;
   const loggedIn = !!currentUser;
@@ -364,6 +397,9 @@ if (savedUsername) {
   currentUser = { id: `username:${savedUsername}` };
   updateAuthUI();
   closeAuthModal();
+  // Netralisasi status lokal di render awal agar tidak langsung tampil "Selesai"
+  status = {};
+  renderPrayerList();
   // Baca dari server terlebih dahulu; hanya kirim lokal jika server kosong
   fetchTodayFromSupabase().then(todayData => {
     if (todayData) {
@@ -376,9 +412,16 @@ if (savedUsername) {
       };
       saveStatus(status);
       renderPrayerList();
-    } else if (PRAYERS.some(p => !!status[p.key])) {
-      // Hanya jika lokal punya data, dorong ke server
-      syncSupabase(status).catch(() => {});
+    } else {
+      // Server kosong: gunakan status lokal khusus username (jika ada), tanpa mencampur data antar username
+      const userLocal = loadStatus();
+      const hasLocal = PRAYERS.some(p => !!userLocal[p.key]);
+      status = hasLocal ? userLocal : {};
+      if (hasLocal) {
+        saveStatus(status);
+        syncSupabase(status).catch(() => {});
+      }
+      renderPrayerList();
     }
   }).catch(() => {});
 }
@@ -414,6 +457,9 @@ if (elAuthDoLogin) {
       localStorage.setItem(usernameKey, username);
       currentUser = { id: `username:${username}` }; // penanda lokal agar UI menganggap login
       updateAuthUI();
+      // Netralisasi status lokal di render awal setelah login username
+      status = {};
+      renderPrayerList();
       // Baca dari server terlebih dahulu; hanya kirim lokal jika server kosong
       fetchTodayFromSupabase().then(todayData => {
         if (todayData) {
@@ -426,8 +472,16 @@ if (elAuthDoLogin) {
           };
           saveStatus(status);
           renderPrayerList();
-        } else if (PRAYERS.some(p => !!status[p.key])) {
-          syncSupabase(status).catch(() => {});
+        } else {
+          // Server kosong: gunakan status lokal khusus username (jika ada), tanpa mencampur data antar username
+          const userLocal = loadStatus();
+          const hasLocal = PRAYERS.some(p => !!userLocal[p.key]);
+          status = hasLocal ? userLocal : {};
+          if (hasLocal) {
+            saveStatus(status);
+            syncSupabase(status).catch(() => {});
+          }
+          renderPrayerList();
         }
       }).catch(() => {});
     } catch (e) {
