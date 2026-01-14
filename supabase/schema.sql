@@ -9,6 +9,7 @@ create table if not exists public.prayers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid null,               -- diisi saat pengguna login
   device_id text null,             -- fallback anonim per perangkat
+  username text null,              -- identitas sederhana agar data persist lintas perangkat
   date date not null,              -- tanggal (YYYY-MM-DD)
   subuh boolean not null default false,
   dzuhur boolean not null default false,
@@ -28,6 +29,11 @@ create unique index if not exists prayers_device_date_unique
   on public.prayers (device_id, date)
   where device_id is not null;
 
+-- Unik per username per hari (khusus baris yang punya username)
+create unique index if not exists prayers_username_date_unique
+  on public.prayers (username, date)
+  where username is not null;
+
 -- Trigger untuk mengisi updated_at saat update
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
@@ -45,25 +51,26 @@ create trigger prayers_updated_at
 -- Aktifkan Row Level Security
 alter table public.prayers enable row level security;
 
--- Kebijakan untuk pengguna terautentikasi (disarankan untuk produksi)
-drop policy if exists "read_own" on public.prayers;
-create policy "read_own" on public.prayers
+-- Kebijakan akses publik sederhana (tanpa autentikasi) agar data bisa dipakai lintas perangkat
+-- Perhatian: ini membuka tabel untuk dibaca/ditulis oleh semua klien dengan anon key.
+drop policy if exists "public_read" on public.prayers;
+create policy "public_read" on public.prayers
   for select
-  to authenticated
-  using (user_id = auth.uid());
+  to public
+  using (true);
 
-drop policy if exists "insert_own" on public.prayers;
-create policy "insert_own" on public.prayers
+drop policy if exists "public_insert" on public.prayers;
+create policy "public_insert" on public.prayers
   for insert
-  to authenticated
-  with check (user_id = auth.uid());
+  to public
+  with check (true);
 
-drop policy if exists "update_own" on public.prayers;
-create policy "update_own" on public.prayers
+drop policy if exists "public_update" on public.prayers;
+create policy "public_update" on public.prayers
   for update
-  to authenticated
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  to public
+  using (true)
+  with check (true);
 
 -- OPSIONAL: kebijakan untuk baris anonim (tanpa login) berbasis device_id.
 -- Perhatikan risiko keamanan: baris anonim dapat diakses oleh siapa pun.

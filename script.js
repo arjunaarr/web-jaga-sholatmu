@@ -310,38 +310,18 @@ function updateAuthUI() {
   elUserInfo.textContent = loggedIn ? (savedUsername || 'Pengguna') : 'Pengguna';
 }
 function getIdSelector() {
+  if (savedUsername) {
+    return { field: 'username', value: savedUsername, conflict: 'username,date' };
+  }
   if (currentUser?.id) {
     return { field: 'user_id', value: currentUser.id, conflict: 'user_id,date' };
   }
   return { field: 'device_id', value: deviceId, conflict: 'device_id,date' };
 }
-if (supabaseEnabled && supabase) {
-  try {
-    supabase.auth.getSession().then(({ data }) => {
-      currentUser = data?.session?.user || null;
-      updateAuthUI();
-    });
-    supabase.auth.onAuthStateChange((_event, session) => {
-      currentUser = session?.user || null;
-      updateAuthUI();
-      // Saat login/logout, ambil ulang data bulan dan render kalender
-      const now = new Date();
-      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      fetchMonthStatuses(startMonth, endMonth)
-        .then(map => renderCalendarMonth(now, map))
-        .catch(() => renderCalendarMonth(now));
-      // Dan refresh status hari ini dari server jika ada
-      fetchTodayFromSupabase()
-        .then(data => { if (data) { status = { subuh: !!data.subuh, dzuhur: !!data.dzuhur, ashar: !!data.ashar, maghrib: !!data.maghrib, isya: !!data.isya }; saveStatus(status); renderPrayerList(); } })
-        .catch(() => {});
-    });
-  } catch {}
-}
+// Tidak menggunakan sesi auth Supabase untuk mengurangi waktu loading
 // Login via Username (anonymous Supabase)
 if (elLoginBtn) {
   elLoginBtn.addEventListener('click', () => {
-    if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan ANON_KEY di config.js.'); return; }
     if (elAuthModal) elAuthModal.hidden = false;
     if (elAuthMsg) elAuthMsg.textContent = '';
   });
@@ -353,29 +333,17 @@ if (elAuthClose) {
 }
 if (elAuthDoLogin) {
   elAuthDoLogin.addEventListener('click', async () => {
-    if (!supabaseEnabled || !supabase) { alert('Supabase belum dikonfigurasi.'); return; }
     const username = (elAuthUsername?.value || '').trim();
     if (!username) { elAuthMsg.textContent = 'Masukkan username terlebih dahulu.'; return; }
     elAuthDoLogin.disabled = true;
-    elAuthMsg.textContent = 'Membuat sesi anonim...';
+    elAuthMsg.textContent = 'Menyiapkan identitas username...';
     try {
-      // Jika belum ada sesi, buat sesi anonim
-      const { data: sessData } = await supabase.auth.getSession();
-      if (!sessData?.session) {
-        const { error: signErr } = await supabase.auth.signInAnonymously();
-        if (signErr) throw signErr;
-      }
-      // Set metadata username (opsional)
-      try { await supabase.auth.updateUser({ data: { username } }); } catch {}
-      // Ambil user terkini
-      const { data: after } = await supabase.auth.getSession();
-      currentUser = after?.session?.user || null;
-      // Simpan username lokal
       savedUsername = username;
       localStorage.setItem(usernameKey, username);
+      currentUser = { id: `username:${username}` }; // penanda lokal agar UI menganggap login
       updateAuthUI();
       if (elAuthModal) elAuthModal.hidden = true;
-      // Tarik ulang status dari server untuk user ini
+      // Tarik ulang status dari server untuk username ini
       const todayData = await fetchTodayFromSupabase();
       if (todayData) {
         status = {
@@ -397,26 +365,15 @@ if (elAuthDoLogin) {
 }
 if (elLogoutBtn) {
   elLogoutBtn.addEventListener('click', async () => {
-    if (!supabaseEnabled || !supabase) return;
-    await supabase.auth.signOut();
+    // Tidak perlu signOut Supabase ketika memakai mode username publik
     localStorage.removeItem(usernameKey);
     savedUsername = null;
+    currentUser = null;
+    updateAuthUI();
   });
 }
 
 (async function init() {
-  // Pastikan ada sesi anonim agar data tersimpan stabil di perangkat ini
-  if (supabaseEnabled && supabase) {
-    try {
-      const { data } = await supabase.auth.getSession();
-      if (!data?.session) {
-        await supabase.auth.signInAnonymously();
-      }
-      const { data: after } = await supabase.auth.getSession();
-      currentUser = after?.session?.user || null;
-      updateAuthUI();
-    } catch {}
-  }
   // Jika Supabase aktif, baca status hari ini dan bulanan
   try {
     const todayData = await fetchTodayFromSupabase();
