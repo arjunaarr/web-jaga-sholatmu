@@ -147,12 +147,18 @@ function saveStatus(st) {
 
 // Render daftar sholat
 let status = loadStatus();
+// Cache jadwal sholat agar tidak hilang saat render ulang tanpa argumen
+let currentPrayerTimes = { subuh: '—:—', dzuhur: '—:—', ashar: '—:—', maghrib: '—:—', isya: '—:—' };
 
-function renderPrayerList(times = {}) {
+function renderPrayerList(times = currentPrayerTimes) {
   elPrayerList.innerHTML = '';
   PRAYERS.forEach(p => {
     const li = document.createElement('li');
     li.className = 'prayer-item';
+
+    const icon = document.createElement('div');
+    icon.className = 'prayer-icon';
+    icon.innerHTML = getPrayerIconSVG(p.key);
 
     const name = document.createElement('div');
     name.className = 'prayer-name';
@@ -177,12 +183,31 @@ function renderPrayerList(times = {}) {
       renderCalendarMonth();
     });
 
+    li.appendChild(icon);
     li.appendChild(name);
     li.appendChild(time);
     li.appendChild(btn);
     elPrayerList.appendChild(li);
   });
   updateProgress();
+}
+
+function getPrayerIconSVG(key) {
+  // Ikon sederhana inline SVG per waktu sholat
+  switch (key) {
+    case 'subuh': // sunrise
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 20h18v-2H3v2zm9-9a5 5 0 015 5H7a5 5 0 015-5zm0-6l2 2h-4l2-2zm8 5l2 2-2 2-2-2 2-2zM5 10l2 2-2 2-2-2 2-2z"/></svg>';
+    case 'dzuhur': // sun high
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 4l1.41 1.41L12 6.83l-1.41-1.42L12 4zm8 8l-1.41 1.41-1.42-1.41 1.42-1.41L20 12zM4 12l1.41-1.41L6.83 12l-1.42 1.41L4 12zm12.24-6.24l1.41 1.41-1.41 1.41-1.41-1.41 1.41-1.41zM7.76 17.24l-1.41-1.41 1.41-1.41 1.41 1.41-1.41 1.41zM12 8a4 4 0 110 8 4 4 0 010-8zm0 12l-1.41-1.41L12 17.17l1.41 1.42L12 20z"/></svg>';
+    case 'ashar': // afternoon sun
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M2 20h20v-2H2v2zm10-9a5 5 0 015 5H7a5 5 0 015-5zm6-5l2 2-2 2-2-2 2-2zM6 6l2 2-2 2-2-2 2-2z"/></svg>';
+    case 'maghrib': // sunset
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 20h18v-2H3v2zm9-7a5 5 0 015 5H7a5 5 0 015-5zm0-7l2 2h-4l2-2z"/></svg>';
+    case 'isya': // night moon
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M14 2a9 9 0 106.32 15.32A8 8 0 0114 2z"/></svg>';
+    default:
+      return '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor"/></svg>';
+  }
 }
 
 function updateProgress() {
@@ -347,11 +372,38 @@ async function fetchMonthStatuses(startDate, endDate) {
   }
 }
 
-// Jadwal sholat via Aladhan (opsional, fallback statis)
+// Jadwal sholat via Geolokasi + Aladhan API (fallback statis)
 async function getPrayerTimes() {
-  // Mode cepat: tanpa lokasi & tanpa API eksternal
-  elLocationInfo.textContent = 'Lokasi: — (tanpa lokasi)';
-  return { subuh: '04:45', dzuhur: '12:00', ashar: '15:15', maghrib: '18:00', isya: '19:15' };
+  // Helper: promisify geolocation
+  const getGeo = () => new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) return reject(new Error('Geolokasi tidak tersedia'));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+    );
+  });
+
+  try {
+    const { lat, lon } = await getGeo();
+    elLocationInfo.textContent = `Lokasi: ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+    const url = `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lon}&method=2&school=0`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+    if (!json || json.code !== 200 || !json.data || !json.data.timings) throw new Error('API Aladhan gagal');
+    const t = json.data.timings;
+    return {
+      subuh: (t.Fajr || '').slice(0,5) || '—:—',
+      dzuhur: (t.Dhuhr || '').slice(0,5) || '—:—',
+      ashar: (t.Asr || '').slice(0,5) || '—:—',
+      maghrib: (t.Maghrib || '').slice(0,5) || '—:—',
+      isya: (t.Isha || '').slice(0,5) || '—:—',
+    };
+  } catch (e) {
+    // Fallback cepat: tanpa lokasi & tanpa API eksternal
+    elLocationInfo.textContent = 'Lokasi: — (tanpa lokasi)';
+    return { subuh: '04:45', dzuhur: '12:00', ashar: '15:15', maghrib: '18:00', isya: '19:15' };
+  }
 }
 
 // Mode fokus ibadah
@@ -509,8 +561,11 @@ if (elLogoutBtn) {
   renderMonthStats(base);
   // Update waktu sholat secara async
   getPrayerTimes().then(times => {
-    renderPrayerList(times);
-  }).catch(() => {});
+    currentPrayerTimes = { ...currentPrayerTimes, ...times };
+    renderPrayerList(currentPrayerTimes);
+  }).catch(() => {
+    renderPrayerList(currentPrayerTimes);
+  });
   // Sync ke Supabase akan dilakukan setelah user mengatur username atau pada interaksi
 })();
 
