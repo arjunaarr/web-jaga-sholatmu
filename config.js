@@ -1,4 +1,3 @@
-// Stub konfigurasi Supabase agar tidak error saat preview lokal.
-// Ganti nilai berikut saat Anda siap menghubungkan ke Supabase.
-window.SUPABASE_URL = undefined;
-window.SUPABASE_ANON_KEY = undefined;
+// Konfigurasi Supabase (publishable client key). Aman untuk dipakai di klien.
+window.SUPABASE_URL = 'https://uhtpvitsfygdrhfcsefh.supabase.co';
+window.SUPABASE_ANON_KEY = 'sb_publishable_etWUUg7704tgefq7jtVk7g_DZUzC9wK';
