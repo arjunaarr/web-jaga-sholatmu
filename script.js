@@ -158,7 +158,11 @@ async function syncSupabase(currentStatus) {
   if (!supabaseEnabled || !supabase) return;
   const selector = getIdSelector();
   const payload = {
-    [selector.field]: selector.value,
+    // Selalu sertakan username dan device_id agar baris mudah ditemukan lintas perangkat
+    username: savedUsername || null,
+    device_id: deviceId,
+    // Jika ada user_id (nantinya), boleh ikut
+    user_id: currentUser?.id || null,
     date: todayKey,
     subuh: !!currentStatus.subuh,
     dzuhur: !!currentStatus.dzuhur,
@@ -205,7 +209,16 @@ async function fetchTodayFromSupabase() {
       .eq('date', todayKey)
       .maybeSingle();
     if (error) throw error;
-    return data || null;
+    if (data) return data;
+    // Fallback jika tidak ada data untuk username: coba device_id
+    const { data: devData, error: devErr } = await supabase
+      .from('prayers')
+      .select('subuh,dzuhur,ashar,maghrib,isya')
+      .eq('device_id', deviceId)
+      .eq('date', todayKey)
+      .maybeSingle();
+    if (devErr) { console.warn('Supabase read today fallback error:', devErr.message); return null; }
+    return devData || null;
   } catch (err) {
     if (sel.field !== 'device_id') {
       const { data, error } = await supabase
@@ -234,9 +247,30 @@ async function fetchMonthStatuses(startDate, endDate) {
       .gte('date', startDate.toISOString().slice(0,10))
       .lte('date', endDate.toISOString().slice(0,10));
     if (error) throw error;
-    const map = {};
-    for (const row of (data || [])) {
-      map[row.date] = {
+    if (data && data.length > 0) {
+      const map = {};
+      for (const row of data) {
+        map[row.date] = {
+          subuh: !!row.subuh,
+          dzuhur: !!row.dzuhur,
+          ashar: !!row.ashar,
+          maghrib: !!row.maghrib,
+          isya: !!row.isya,
+        };
+      }
+      return map;
+    }
+    // Fallback jika kosong: coba berdasarkan device_id
+    const { data: devRows, error: devErr } = await supabase
+      .from('prayers')
+      .select('date,subuh,dzuhur,ashar,maghrib,isya')
+      .eq('device_id', deviceId)
+      .gte('date', startDate.toISOString().slice(0,10))
+      .lte('date', endDate.toISOString().slice(0,10));
+    if (devErr) { console.warn('Supabase read month fallback error:', devErr.message); return null; }
+    const devMap = {};
+    for (const row of (devRows || [])) {
+      devMap[row.date] = {
         subuh: !!row.subuh,
         dzuhur: !!row.dzuhur,
         ashar: !!row.ashar,
@@ -244,7 +278,7 @@ async function fetchMonthStatuses(startDate, endDate) {
         isya: !!row.isya,
       };
     }
-    return map;
+    return devMap;
   } catch (err) {
     if (sel.field !== 'device_id') {
       const { data, error } = await supabase
