@@ -34,13 +34,17 @@ const deviceId = (() => {
 
 // Supabase client (opsional)
 let supabase = null;
-let supabaseEnabled = !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+let supabaseEnabled = false;
+function hasSupabaseConfig() {
+  return !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+}
 async function ensureSupabase() {
-  if (!supabaseEnabled) return null;
-  if (supabase) return supabase;
+  if (!hasSupabaseConfig()) { supabaseEnabled = false; return null; }
+  if (supabase) { supabaseEnabled = true; return supabase; }
   try {
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    supabaseEnabled = true;
   } catch (err) {
     console.warn('Gagal memuat Supabase JS:', err);
     supabaseEnabled = false;
@@ -181,6 +185,8 @@ async function syncSupabase(currentStatus) {
       const { error: fbErr } = await supabase
         .from('prayers')
         .upsert({
+          // Sertakan username agar baris tetap terbaca lintas perangkat
+          username: savedUsername || null,
           device_id: deviceId,
           date: todayKey,
           subuh: !!currentStatus.subuh,
@@ -358,8 +364,23 @@ if (savedUsername) {
   currentUser = { id: `username:${savedUsername}` };
   updateAuthUI();
   closeAuthModal();
-  // Migrasi/penyelarasan: dorong status lokal ke server di bawah username
-  syncSupabase(status).catch(() => {});
+  // Baca dari server terlebih dahulu; hanya kirim lokal jika server kosong
+  fetchTodayFromSupabase().then(todayData => {
+    if (todayData) {
+      status = {
+        subuh: !!todayData.subuh,
+        dzuhur: !!todayData.dzuhur,
+        ashar: !!todayData.ashar,
+        maghrib: !!todayData.maghrib,
+        isya: !!todayData.isya,
+      };
+      saveStatus(status);
+      renderPrayerList();
+    } else if (PRAYERS.some(p => !!status[p.key])) {
+      // Hanya jika lokal punya data, dorong ke server
+      syncSupabase(status).catch(() => {});
+    }
+  }).catch(() => {});
 }
 if (elLoginBtn) {
   elLoginBtn.addEventListener('click', () => {
@@ -393,9 +414,7 @@ if (elAuthDoLogin) {
       localStorage.setItem(usernameKey, username);
       currentUser = { id: `username:${username}` }; // penanda lokal agar UI menganggap login
       updateAuthUI();
-      // Segera sinkronkan status lokal ke server dengan kunci username
-      syncSupabase(status).catch(() => {});
-      // Tarik ulang status dari server untuk username ini (non-blocking)
+      // Baca dari server terlebih dahulu; hanya kirim lokal jika server kosong
       fetchTodayFromSupabase().then(todayData => {
         if (todayData) {
           status = {
@@ -407,6 +426,8 @@ if (elAuthDoLogin) {
           };
           saveStatus(status);
           renderPrayerList();
+        } else if (PRAYERS.some(p => !!status[p.key])) {
+          syncSupabase(status).catch(() => {});
         }
       }).catch(() => {});
     } catch (e) {
